@@ -5,9 +5,7 @@ from diff_match_patch import diff_match_patch
 
 # Configuration
 INPUT_FILE = "sample.txt"      # File to track
-BASE_FILE = "base_version.txt"   # Initial snapshot
 DIFFS_DIR = "diffs"              # Directory to store diffs
-LATEST_FILE = "latest_version.txt" # Generated latest version
 
 def ensure_directory(path):
     """Create directory if it doesn't exist"""
@@ -49,10 +47,10 @@ def get_diffs():
             diffs.append(read_file(os.path.join(DIFFS_DIR, df)))
     return diffs
 
-def reconstruct_version(base_content, diffs):
+def reconstruct_version(diffs):
     """Reconstruct a version by applying diffs to base"""
     dmp = diff_match_patch()
-    current_content = base_content
+    current_content = ""
     for patch_text in diffs:
         patches = dmp.patch_fromText(patch_text)
         current_content, _ = dmp.patch_apply(patches, current_content)
@@ -71,11 +69,6 @@ def save_diff(old_content, new_content):
 
 def main():
     ensure_directory(DIFFS_DIR)
-    
-    # First-time setup
-    if not os.path.exists(BASE_FILE):
-        create_base_version()
-        return
 
     # Get current document state
     current_content = get_current_content()
@@ -84,10 +77,8 @@ def main():
         return
 
     # Reconstruct expected state from base + diffs
-    base_content = read_file(BASE_FILE)
     diffs = get_diffs()
-    reconstructed_content = reconstruct_version(base_content, diffs)
-
+    reconstructed_content = reconstruct_version(diffs)
     # Check if changes need to be tracked
     if reconstructed_content == current_content:
         print("No changes detected")
@@ -96,12 +87,6 @@ def main():
     # Save new diff
     new_diff = save_diff(reconstructed_content, current_content)
     print(f"Saved new diff ({len(new_diff)} bytes)")
-
-    # Generate latest version from all diffs
-    all_diffs = diffs + [new_diff]
-    latest_content = reconstruct_version(base_content, all_diffs)
-    write_file(LATEST_FILE, latest_content)
-    print(f"Updated {LATEST_FILE}")
-
+    
 if __name__ == "__main__":
     main()
